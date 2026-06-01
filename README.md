@@ -62,14 +62,14 @@ Prerequisites:
 ### 1. Build and run
 
 ```bash
-git clone this repo
+git clone https://github.com/guyg2232/byparr-proxy.git
 cd byparr-proxy
 docker compose up -d
 ```
 
 This starts both `byparr` and `byparr-proxy`. If you already run Byparr in your existing arr stack, drop just the snippet below into your existing compose instead.
 
-Smoke-test from your browser: visit `http://YOUR_HOST_IP:8888/cat/Movies/1/`. After 30s–2min (Byparr solving Cloudflare for the first time — can be slow under load), you should see the actual 1337x Movies page render, unstyled, because we 404 static assets to keep things fast.
+Smoke-test from your browser on the Docker host: visit `http://localhost:8888/cat/Movies/1/`. After 30s–2min (Byparr solving Cloudflare for the first time — can be slow under load), you should see the actual 1337x Movies page render, unstyled, because we 404 static assets to keep things fast. If Docker is running on another machine, use that machine's LAN IP instead of `localhost`.
 
 ### Drop-in snippet for an existing arr-stack compose
 
@@ -77,7 +77,7 @@ If you're already running Byparr in your compose, just append this one service. 
 
 ```yaml
   byparr-proxy:
-    image: ghcr.io/YOUR_USER/byparr-proxy:latest  # or `build: ./byparr-proxy` if cloned locally
+    build: ./byparr-proxy
     container_name: byparr-proxy
     restart: unless-stopped
     ports:
@@ -95,18 +95,18 @@ Then `docker compose up -d byparr-proxy` and continue with step 2.
 
 ### 2. Drop the Cardigann definition into Prowlarr
 
-**a. Create the `Custom/` folder if it doesn't exist.** It often isn't there by default — Prowlarr only creates it once you've actually added a custom definition through some prior workflow. From your Docker host (Linux example shown; on Windows use `mkdir` instead):
+**a. Create the `Custom/` folder if it doesn't exist.** It often isn't there by default — Prowlarr only creates it once you've actually added a custom definition through some prior workflow:
 
 ```bash
-mkdir -p <prowlarr config volume>/Definitions/Custom
+docker exec prowlarr mkdir -p /config/Definitions/Custom
 ```
 
 **The `Custom/` subdirectory is required** — Prowlarr (recent versions) ignores YAML files placed directly in `Definitions/`. Those are its own internal mirror of built-in definitions; user customs only get loaded from `Custom/`. If you skip this step or drop the YAML one folder up, the indexer will silently not appear in the add list.
 
 **b. Copy `definitions/1337x-byparr.yml` into that folder:**
 
-```
-<prowlarr config volume>/Definitions/Custom/1337x-byparr.yml
+```bash
+docker cp definitions/1337x-byparr.yml prowlarr:/config/Definitions/Custom/1337x-byparr.yml
 ```
 
 Verify from inside the container that Prowlarr can see the file:
@@ -165,7 +165,7 @@ The proxy is single-upstream per instance — one container handles one site. To
       - byparr
 ```
 
-**2. Create a Cardigann YAML at `<prowlarr config>/Definitions/Custom/yts-byparr.yml`** based on the existing `yts.yml` from the [Prowlarr indexers repo](https://github.com/Prowlarr/Indexers), with two changes:
+**2. Create a Cardigann YAML in Prowlarr's `/config/Definitions/Custom/` directory** based on the existing `yts.yml` from the [Prowlarr indexers repo](https://github.com/Prowlarr/Indexers), with two changes:
    - Change `id:` to something unique (`yts-byparr`)
    - Change `name:` to something distinguishable (`YTS (via Byparr)`)
    - Replace the `links:` block with a single entry: `- http://byparr-proxy-yts:8889/`
