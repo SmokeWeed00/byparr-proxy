@@ -59,21 +59,15 @@ Prerequisites:
 - Prowlarr (or Jackett) running in the same Docker network
 - Byparr running (`ghcr.io/thephaseless/byparr:latest`)
 
-### 1. Build and run
+### 1. Add it to your existing stack
+
+From the directory that already contains your stack's compose file, clone this repo:
 
 ```bash
 git clone https://github.com/guyg2232/byparr-proxy.git
-cd byparr-proxy
-docker compose up -d
 ```
 
-This starts both `byparr` and `byparr-proxy`. If you already run Byparr in your existing arr stack, drop just the snippet below into your existing compose instead.
-
-Smoke-test from your browser on the Docker host: visit `http://localhost:8888/cat/Movies/1/`. After 30s–2min (Byparr solving Cloudflare for the first time — can be slow under load), you should see the actual 1337x Movies page render, unstyled, because we 404 static assets to keep things fast. If Docker is running on another machine, use that machine's LAN IP instead of `localhost`.
-
-### Drop-in snippet for an existing arr-stack compose
-
-If you're already running Byparr in your compose, just append this one service. No other changes needed — it'll join your existing Docker network and reach Byparr by service name.
+Append this service to the `services:` block in your existing compose file. No other changes needed if `byparr` is already in the same compose project/network — the proxy will reach it by service name.
 
 ```yaml
   byparr-proxy:
@@ -91,7 +85,15 @@ If you're already running Byparr in your compose, just append this one service. 
       - byparr
 ```
 
-Then `docker compose up -d byparr-proxy` and continue with step 2.
+Then start just the new service:
+
+```bash
+docker compose up -d byparr-proxy
+```
+
+Smoke-test from your browser on the Docker host: visit `http://localhost:8888/cat/Movies/1/`. After 30s–2min (Byparr solving Cloudflare for the first time — can be slow under load), you should see the actual 1337x Movies page render, unstyled, because we 404 static assets to keep things fast. If Docker is running on another machine, use that machine's LAN IP instead of `localhost`.
+
+If you want to run this repo standalone instead, `cd byparr-proxy && docker compose up -d` starts both `byparr` and `byparr-proxy` using the included compose file.
 
 ### 2. Drop the Cardigann definition into Prowlarr
 
@@ -106,7 +108,7 @@ docker exec prowlarr mkdir -p /config/Definitions/Custom
 **b. Copy `definitions/1337x-byparr.yml` into that folder:**
 
 ```bash
-docker cp definitions/1337x-byparr.yml prowlarr:/config/Definitions/Custom/1337x-byparr.yml
+docker cp byparr-proxy/definitions/1337x-byparr.yml prowlarr:/config/Definitions/Custom/1337x-byparr.yml
 ```
 
 Verify from inside the container that Prowlarr can see the file:
